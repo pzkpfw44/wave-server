@@ -1,3 +1,4 @@
+// Package main implements a data migration tool for the Wave server.
 package main
 
 import (
@@ -14,6 +15,7 @@ import (
 	"github.com/pzkpfw44/wave-server/pkg/logger"
 )
 
+// Define command line flags
 var (
 	sourceDir = flag.String("source", "./old_data", "Source directory for old data")
 	dryRun    = flag.Bool("dry-run", false, "Dry run mode (no writes)")
@@ -36,10 +38,11 @@ func NewExtractor(sourceDir string, logger *zap.Logger) *Extractor {
 // Extract extracts data from the source directory
 func (e *Extractor) Extract() error {
 	e.logger.Info("Extracting data from source directory", zap.String("dir", e.sourceDir))
-	// Implement extraction logic
+	// TODO: Implement extraction logic
 	return nil
 }
 
+// main is the entry point for the migration tool
 func main() {
 	// Parse command line flags
 	flag.Parse()
@@ -58,7 +61,7 @@ func main() {
 		log.Fatal("Failed to load configuration", zap.Error(err))
 	}
 
-	// Create context
+	// Create context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
@@ -101,7 +104,7 @@ func RunMigration(ctx context.Context, extractor *Extractor, userRepo *repositor
 		return fmt.Errorf("extraction failed: %w", err)
 	}
 
-	// Implement migration logic
+	// Log migration status
 	log.Info("Migration would process data here", zap.Bool("dry_run", dryRun))
 
 	// Collect statistics
@@ -114,14 +117,26 @@ func RunMigration(ctx context.Context, extractor *Extractor, userRepo *repositor
 		MessagesCreated   int
 	}
 
-	// For now just set some placeholder values 
+	// For now just set some placeholder values
 	stats.UsersExtracted = 10
-	stats.UsersCreated = dryRun ? 0 : 10
-	stats.ContactsExtracted = 50
-	stats.ContactsCreated = dryRun ? 0 : 50
-	stats.MessagesExtracted = 200
-	stats.MessagesCreated = dryRun ? 0 : 200
+	stats.UsersCreated = 0
+	if !dryRun {
+		stats.UsersCreated = 10
+	}
 
+	stats.ContactsExtracted = 50
+	stats.ContactsCreated = 0
+	if !dryRun {
+		stats.ContactsCreated = 50
+	}
+
+	stats.MessagesExtracted = 200
+	stats.MessagesCreated = 0
+	if !dryRun {
+		stats.MessagesCreated = 200
+	}
+
+	// Log statistics
 	log.Info("Migration statistics",
 		zap.Int("users_extracted", stats.UsersExtracted),
 		zap.Int("users_created", stats.UsersCreated),

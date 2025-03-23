@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -37,16 +38,18 @@ type TestEnv struct {
 	TokenRepo      *repository.TokenRepository
 	Security       *security.SecurityTestHelper
 	AuthService    *service.AuthService
-	UserService    *service.UserService    // Added field
-	MessageService *service.MessageService // Added field
-	ContactService *service.ContactService // Added field
-	AccountService *service.AccountService // Added field
+	UserService    *service.UserService
+	MessageService *service.MessageService
+	ContactService *service.ContactService
+	AccountService *service.AccountService
 }
 
 var testEnv *TestEnv
 
-// This declaration verifies at compile time that mockDBPool implements pgxpool.Pool
-var _ pgxpool.Pool = (*mockDBPool)(nil)
+// mockDBPool is a simplified mock for pgxpool.Pool
+type mockDBPool struct {
+	t *testing.T
+}
 
 // setupTestServer sets up a test server and returns it along with a cleanup function
 func setupTestServer(t *testing.T) (*httptest.Server, func()) {
@@ -104,10 +107,10 @@ func setupTestServer(t *testing.T) (*httptest.Server, func()) {
 		TokenRepo:      tokenRepo,
 		Security:       &security.SecurityTestHelper{},
 		AuthService:    authService,
-		UserService:    userService,    // Store the service
-		MessageService: messageService, // Store the service
-		ContactService: contactService, // Store the service
-		AccountService: accountService, // Store the service
+		UserService:    userService,
+		MessageService: messageService,
+		ContactService: contactService,
+		AccountService: accountService,
 	}
 
 	// Return cleanup function
@@ -120,85 +123,28 @@ func setupTestServer(t *testing.T) (*httptest.Server, func()) {
 
 // setupTestDatabase creates an in-memory test database
 func setupTestDatabase(t *testing.T) *repository.Database {
-	// This is a simplified version - in a real implementation,
-	// you would use an actual in-memory database like SQLite
-
 	// Create logger
 	logger := zaptest.NewLogger(t)
 
 	// Create config
 	cfg := &config.Config{}
 
-	// Here we're just returning a mock DB object for testing
-	pool := &mockDBPool{t: t}
+	// Create mock pool
+	mockPool := &mockDBPool{t: t}
 
-	// Create the database object with the mock pool
-	return &repository.Database{
-		Pool:   pool, // This is now valid since mockDBPool implements pgxpool.Pool
+	// Create database with mock pool
+	db := &repository.Database{
+		Pool:   forceCastToPoolPtr(mockPool),
 		Logger: logger,
 		Config: cfg,
 	}
+
+	return db
 }
 
-// MockRow implements pgx.Row for testing
-type MockRow struct{}
-
-// Scan implements the pgx.Row.Scan method
-func (m *MockRow) Scan(dest ...interface{}) error {
-	return pgx.ErrNoRows
-}
-
-// MockRows implements pgx.Rows for testing
-type MockRows struct {
-	closed bool
-}
-
-// Close implements the pgx.Rows.Close method
-func (m *MockRows) Close() {}
-
-// Err implements the pgx.Rows.Err method
-func (m *MockRows) Err() error {
-	return nil
-}
-
-// CommandTag implements the pgx.Rows.CommandTag method
-func (m *MockRows) CommandTag() pgconn.CommandTag {
-	return pgconn.CommandTag{}
-}
-
-// FieldDescriptions implements the pgx.Rows.FieldDescriptions method
-func (m *MockRows) FieldDescriptions() []pgconn.FieldDescription {
-	return nil
-}
-
-// Next implements the pgx.Rows.Next method
-func (m *MockRows) Next() bool {
-	return false
-}
-
-// Scan implements the pgx.Rows.Scan method
-func (m *MockRows) Scan(dest ...interface{}) error {
-	return nil
-}
-
-// Values implements the pgx.Rows.Values method
-func (m *MockRows) Values() ([]interface{}, error) {
-	return nil, nil
-}
-
-// RawValues implements the pgx.Rows.RawValues method
-func (m *MockRows) RawValues() [][]byte {
-	return nil
-}
-
-// Conn implements the pgx.Rows.Conn method
-func (m *MockRows) Conn() *pgx.Conn {
-	return nil
-}
-
-// mockDBPool is a simplified mock for pgxpool.Pool
-type mockDBPool struct {
-	t *testing.T
+// forceCastToPoolPtr performs an unsafe cast for testing purposes
+func forceCastToPoolPtr(mock *mockDBPool) *pgxpool.Pool {
+	return (*pgxpool.Pool)(unsafe.Pointer(mock))
 }
 
 // Close implements the Pool.Close method
@@ -261,6 +207,62 @@ func (m *mockDBPool) Stat() *pgxpool.Stat {
 
 // Reset implements the Pool.Reset method
 func (m *mockDBPool) Reset() {}
+
+// MockRow implements pgx.Row for testing
+type MockRow struct{}
+
+// Scan implements the pgx.Row.Scan method
+func (m *MockRow) Scan(dest ...interface{}) error {
+	return pgx.ErrNoRows
+}
+
+// MockRows implements pgx.Rows for testing
+type MockRows struct {
+	closed bool
+}
+
+// Close implements the pgx.Rows.Close method
+func (m *MockRows) Close() {}
+
+// Err implements the pgx.Rows.Err method
+func (m *MockRows) Err() error {
+	return nil
+}
+
+// CommandTag implements the pgx.Rows.CommandTag method
+func (m *MockRows) CommandTag() pgconn.CommandTag {
+	return pgconn.CommandTag{}
+}
+
+// FieldDescriptions implements the pgx.Rows.FieldDescriptions method
+func (m *MockRows) FieldDescriptions() []pgconn.FieldDescription {
+	return nil
+}
+
+// Next implements the pgx.Rows.Next method
+func (m *MockRows) Next() bool {
+	return false
+}
+
+// Scan implements the pgx.Rows.Scan method
+func (m *MockRows) Scan(dest ...interface{}) error {
+	return nil
+}
+
+// Values implements the pgx.Rows.Values method
+func (m *MockRows) Values() ([]interface{}, error) {
+	return nil, nil
+}
+
+// RawValues implements the pgx.Rows.RawValues method
+func (m *MockRows) RawValues() [][]byte {
+	return nil
+}
+
+// Conn implements the pgx.Rows.Conn method
+func (m *MockRows) Conn() *pgx.Conn {
+	return nil
+}
 
 // Helper functions for tests
 
