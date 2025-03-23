@@ -6,17 +6,6 @@ import (
 	"net/http"
 )
 
-// Common error codes
-const (
-	ErrCodeUnauthenticated = "UNAUTHENTICATED"
-	ErrCodeUnauthorized    = "UNAUTHORIZED"
-	ErrCodeNotFound        = "NOT_FOUND"
-	ErrCodeBadRequest      = "BAD_REQUEST"
-	ErrCodeConflict        = "CONFLICT"
-	ErrCodeInternal        = "INTERNAL"
-	ErrCodeValidation      = "VALIDATION"
-)
-
 // AppError represents an application-specific error
 type AppError struct {
 	Code    string // Error code

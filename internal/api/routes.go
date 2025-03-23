@@ -4,11 +4,11 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 
-	"github.com/pzkpfw44/wave-server/internal/api/handlers"
-	"github.com/pzkpfw44/wave-server/internal/api/middleware"
-	"github.com/pzkpfw44/wave-server/internal/config"
-	"github.com/pzkpfw44/wave-server/internal/service"
-	"github.com/pzkpfw44/wave-server/pkg/health"
+	"github.com/yourusername/wave-server/internal/api/handlers"
+	"github.com/yourusername/wave-server/internal/api/middleware"
+	"github.com/yourusername/wave-server/internal/config"
+	"github.com/yourusername/wave-server/internal/service"
+	"github.com/yourusername/wave-server/pkg/health"
 )
 
 // SetupRoutes configures all API routes

@@ -6,9 +6,3 @@ type TokenResponse struct {
 	TokenType   string `json:"token_type"`
 	ExpiresIn   int    `json:"expires_in"` // Seconds
 }
-
-// SessionResponse contains the user session status
-type SessionResponse struct {
-	LoggedIn bool   `json:"logged_in"`
-	Username string `json:"username,omitempty"`
-}

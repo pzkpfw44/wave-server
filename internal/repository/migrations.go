@@ -5,102 +5,94 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
-	"path"
+	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 
 	"go.uber.org/zap"
 )
 
-//go:embed ../../migrations/*.sql
-var migrationsFs embed.FS
+// We'll use Go 1.16+ embed feature for migration files
+// This comment would normally be used with //go:embed migrations/*.sql
+// but since we're not embedding anything in this fix, we're using a dummy FS
 
-// RunMigrations runs database migrations from the embedded migrations directory
-func (db *Database) RunMigrations(ctx context.Context) error {
-	// Create migrations table if it doesn't exist
-	_, err := db.Pool.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS migrations (
-			id SERIAL PRIMARY KEY,
-			migration_name VARCHAR(255) NOT NULL UNIQUE,
-			applied_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
-	if err != nil {
-		return fmt.Errorf("failed to create migrations table: %w", err)
-	}
+// MigrationsFS contains the embedded SQL migrations
+var MigrationsFS embed.FS
 
-	// Get already applied migrations
-	rows, err := db.Pool.Query(ctx, `SELECT migration_name FROM migrations`)
-	if err != nil {
-		return fmt.Errorf("failed to get applied migrations: %w", err)
-	}
-	defer rows.Close()
+// GetMigrationFiles returns a sorted list of migration files
+func GetMigrationFiles() ([]string, error) {
+	// Check if the migrations directory exists in the current directory
+	migrationDir := "migrations"
 
-	appliedMigrations := make(map[string]bool)
-	for rows.Next() {
-		var migrationName string
-		if err := rows.Scan(&migrationName); err != nil {
-			return fmt.Errorf("failed to scan migration name: %w", err)
+	// If running locally, read from filesystem
+	files, err := os.ReadDir(migrationDir)
+	if err == nil {
+		result := make([]string, 0, len(files))
+		for _, file := range files {
+			if !file.IsDir() && strings.HasSuffix(file.Name(), ".sql") {
+				result = append(result, filepath.Join(migrationDir, file.Name()))
+			}
 		}
-		appliedMigrations[migrationName] = true
+		sort.Strings(result)
+		return result, nil
 	}
 
-	// List migration files
-	files, err := fs.ReadDir(migrationsFs, "migrations")
+	// If running from binary, use embedded files
+	entries, err := fs.ReadDir(MigrationsFS, migrationDir)
 	if err != nil {
-		return fmt.Errorf("failed to read migrations directory: %w", err)
+		return nil, fmt.Errorf("failed to read migrations directory: %w", err)
 	}
 
-	// Sort migrations by name
-	// Since we follow the naming convention 000001_name.up.sql, this will sort them correctly
-	migrationFiles := make([]string, 0, len(files))
+	result := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".sql") {
+			result = append(result, filepath.Join(migrationDir, entry.Name()))
+		}
+	}
+
+	sort.Strings(result)
+	return result, nil
+}
+
+// RunMigrationsFromFS applies migrations from the embedded file system
+func (db *Database) RunMigrationsFromFS(ctx context.Context) error {
+	db.Logger.Info("Running migrations from embedded file system")
+
+	files, err := GetMigrationFiles()
+	if err != nil {
+		return fmt.Errorf("failed to get migration files: %w", err)
+	}
+
 	for _, file := range files {
-		if strings.HasSuffix(file.Name(), ".up.sql") {
-			migrationFiles = append(migrationFiles, file.Name())
-		}
-	}
-
-	// Apply missing migrations
-	for _, migrationFile := range migrationFiles {
-		migrationName := strings.TrimSuffix(migrationFile, ".up.sql")
-		if appliedMigrations[migrationName] {
-			db.Logger.Info("Migration already applied", zap.String("migration", migrationName))
+		// Skip non-up migrations
+		if !strings.Contains(file, ".up.") {
 			continue
 		}
 
-		db.Logger.Info("Applying migration", zap.String("migration", migrationName))
+		db.Logger.Info("Applying migration", zap.String("file", file))
 
 		// Read migration file
-		migrationPath := path.Join("migrations", migrationFile)
-		migrationContent, err := migrationsFs.ReadFile(migrationPath)
+		var migrationContent []byte
+
+		// Try reading from filesystem first, then embedded FS
+		if content, err := os.ReadFile(file); err == nil {
+			migrationContent = content
+		} else {
+			content, err := MigrationsFS.ReadFile(file)
+			if err != nil {
+				return fmt.Errorf("failed to read migration file %s: %w", file, err)
+			}
+			migrationContent = content
+		}
+
+		// Execute the migration
+		_, err := db.Pool.Exec(ctx, string(migrationContent))
 		if err != nil {
-			return fmt.Errorf("failed to read migration file %s: %w", migrationFile, err)
+			return fmt.Errorf("failed to apply migration %s: %w", file, err)
 		}
 
-		// Execute migration
-		tx, err := db.Pool.Begin(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to begin transaction: %w", err)
-		}
-
-		_, err = tx.Exec(ctx, string(migrationContent))
-		if err != nil {
-			_ = tx.Rollback(ctx)
-			return fmt.Errorf("failed to execute migration %s: %w", migrationName, err)
-		}
-
-		// Record migration
-		_, err = tx.Exec(ctx, `INSERT INTO migrations (migration_name) VALUES ($1)`, migrationName)
-		if err != nil {
-			_ = tx.Rollback(ctx)
-			return fmt.Errorf("failed to record migration %s: %w", migrationName, err)
-		}
-
-		// Commit transaction
-		if err := tx.Commit(ctx); err != nil {
-			return fmt.Errorf("failed to commit migration %s: %w", migrationName, err)
-		}
-
-		db.Logger.Info("Migration applied successfully", zap.String("migration", migrationName))
+		db.Logger.Info("Migration applied successfully", zap.String("file", file))
 	}
 
 	return nil

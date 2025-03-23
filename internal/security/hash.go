@@ -6,12 +6,13 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
+	"strings"
 )
 
 // HashUsername creates a deterministic hash of a username for use as user_id
 func HashUsername(username string) string {
 	// Simple SHA-256 hash of username (lowercased for consistency)
-	hash := sha256.Sum256([]byte(username))
+	hash := sha256.Sum256([]byte(strings.ToLower(username)))
 	return hex.EncodeToString(hash[:])
 }
 

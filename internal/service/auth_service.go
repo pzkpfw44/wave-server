@@ -6,10 +6,10 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/pzkpfw44/wave-server/internal/config"
-	"github.com/pzkpfw44/wave-server/internal/errors"
-	"github.com/pzkpfw44/wave-server/internal/repository"
-	"github.com/pzkpfw44/wave-server/internal/security"
+	"github.com/yourusername/wave-server/internal/config"
+	"github.com/yourusername/wave-server/internal/errors"
+	"github.com/yourusername/wave-server/internal/repository"
+	"github.com/yourusername/wave-server/internal/security"
 )
 
 // AuthService provides authentication business logic
@@ -145,4 +145,9 @@ func (s *AuthService) ScheduleTokenCleanup(ctx context.Context) {
 		}
 	}()
 	s.logger.Info("Scheduled token cleanup")
+}
+
+// UpdateUserActivity updates a user's last active timestamp
+func (s *AuthService) UpdateUserActivity(ctx context.Context, userID string) error {
+	return s.userRepo.UpdateLastActive(ctx, userID)
 }

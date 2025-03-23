@@ -1,167 +1,179 @@
 package integration
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"io"
+	"encoding/base64"
+	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 
-	"github.com/pzkpfw44/wave-server/internal/api"
-	"github.com/pzkpfw44/wave-server/internal/api/handlers"
-	"github.com/pzkpfw44/wave-server/internal/config"
-	"github.com/pzkpfw44/wave-server/internal/repository"
-	"github.com/pzkpfw44/wave-server/internal/service"
-	"github.com/pzkpfw44/wave-server/pkg/health"
+	"github.com/yourusername/wave-server/internal/api"
+	"github.com/yourusername/wave-server/internal/api/handlers"
+	"github.com/yourusername/wave-server/internal/api/middleware"
+	"github.com/yourusername/wave-server/internal/config"
+	"github.com/yourusername/wave-server/internal/repository"
+	"github.com/yourusername/wave-server/internal/security"
+	"github.com/yourusername/wave-server/internal/service"
+	"github.com/yourusername/wave-server/pkg/health"
 )
 
-// TestEnvironment holds test dependencies
-type TestEnvironment struct {
-	Logger   *zap.Logger
-	Config   *config.Config
-	DB       *repository.Database
-	UserRepo *repository.UserRepository
-	Security *security
-	Services *services
+// TestEnv represents a test environment
+type TestEnv struct {
+	Echo        *echo.Echo
+	Config      *config.Config
+	Logger      *zap.Logger
+	DB          *repository.Database
+	UserService *service.UserService
+	AuthService *service.AuthService
+	Handler     *handlers.Handler
+	Server      *httptest.Server
 }
 
-type security struct {
-	HashUsername func(string) string
-}
+// SetupTest sets up a test environment
+func SetupTest(t *testing.T) *TestEnv {
+	// Setup logger
+	logger := zaptest.NewLogger(t)
 
-type services struct {
-	Auth    *service.AuthService
-	User    *service.UserService
-	Message *service.MessageService
-	Contact *service.ContactService
-	Account *service.AccountService
-}
-
-var testEnv *TestEnvironment
-
-// setupTestServer sets up a test server for integration tests
-func setupTestServer(t *testing.T) (*httptest.Server, func()) {
-	if testEnv == nil {
-		// Create test environment only once
-		logger := zaptest.NewLogger(t)
-
-		// Load test config
-		cfg := &config.Config{}
-		cfg.Server.Port = 0 // Use any available port
-		cfg.Database.Host = "localhost"
-		cfg.Database.Port = 5433
-		cfg.Database.User = "yugabyte"
-		cfg.Database.Password = "yugabyte"
-		cfg.Database.Name = "wave_test"
-		cfg.Auth.JWTSecret = "test-secret-key"
-		cfg.Auth.TokenExpiry = 15 * 60 // 15 minutes
-
-		// Connect to database
-		ctx := context.Background()
-		db, err := repository.New(ctx, cfg, logger)
-		if err != nil {
-			t.Fatalf("Failed to connect to database: %v", err)
-		}
-
-		// Create repositories
-		userRepo := repository.NewUserRepository(db)
-		messageRepo := repository.NewMessageRepository(db)
-		contactRepo := repository.NewContactRepository(db)
-		tokenRepo := repository.NewTokenRepository(db)
-
-		// Create services
-		userService := service.NewUserService(userRepo, logger)
-		authService := service.NewAuthService(userRepo, tokenRepo, cfg, logger)
-		messageService := service.NewMessageService(messageRepo, userRepo, logger)
-		contactService := service.NewContactService(contactRepo, logger)
-		accountService := service.NewAccountService(userRepo, contactRepo, messageRepo, tokenRepo, logger)
-
-		testEnv = &TestEnvironment{
-			Logger:   logger,
-			Config:   cfg,
-			DB:       db,
-			UserRepo: userRepo,
-			Security: &security{
-				HashUsername: security.HashUsername,
-			},
-			Services: &services{
-				Auth:    authService,
-				User:    userService,
-				Message: messageService,
-				Contact: contactService,
-				Account: accountService,
-			},
-		}
+	// Load test config
+	cfg := &config.Config{
+		Server: struct {
+			Port           int           `envconfig:"PORT" default:"8080"`
+			Timeout        time.Duration `envconfig:"SERVER_TIMEOUT" default:"30s"`
+			AllowedOrigins []string      `envconfig:"ALLOWED_ORIGINS" default:"*"`
+		}{
+			Port:           8080,
+			Timeout:        30 * time.Second,
+			AllowedOrigins: []string{"*"},
+		},
+		Database: struct {
+			Host     string `envconfig:"DB_HOST" required:"true"`
+			Port     int    `envconfig:"DB_PORT" default:"5433"`
+			User     string `envconfig:"DB_USER" required:"true"`
+			Password string `envconfig:"DB_PASSWORD" required:"true"`
+			Name     string `envconfig:"DB_NAME" default:"wave"`
+			PoolSize int    `envconfig:"DB_POOL_SIZE" default:"10"`
+		}{
+			Host:     "localhost",
+			Port:     5433,
+			User:     "yugabyte",
+			Password: "yugabyte",
+			Name:     "wave_test",
+			PoolSize: 10,
+		},
+		Auth: struct {
+			JWTSecret     string        `envconfig:"JWT_SECRET" required:"true"`
+			TokenExpiry   time.Duration `envconfig:"TOKEN_EXPIRY" default:"24h"`
+			RefreshExpiry time.Duration `envconfig:"REFRESH_EXPIRY" default:"720h"`
+		}{
+			JWTSecret:     "test_secret",
+			TokenExpiry:   24 * time.Hour,
+			RefreshExpiry: 720 * time.Hour,
+		},
+		Environment: "test",
+		LogLevel:    "info",
 	}
+
+	// Check if we're running in CI
+	if os.Getenv("CI") == "true" {
+		cfg.Database.Host = os.Getenv("DB_HOST")
+	}
+
+	// Create database connection
+	ctx := context.Background()
+	db, err := repository.New(ctx, cfg, logger)
+	require.NoError(t, err, "Failed to connect to database")
+
+	// Run migrations
+	err = db.RunMigrations(ctx)
+	require.NoError(t, err, "Failed to run migrations")
+
+	// Create repositories
+	userRepo := repository.NewUserRepository(db)
+	tokenRepo := repository.NewTokenRepository(db)
+
+	// Create services
+	userService := service.NewUserService(userRepo, logger)
+	authService := service.NewAuthService(userRepo, tokenRepo, cfg, logger)
 
 	// Create Echo instance
 	e := echo.New()
 	e.HideBanner = true
 
-	// Create handler
-	h := &handlers.Handler{
+	// Create handlers
+	handler := &handlers.Handler{
 		Auth: &handlers.AuthHandler{
-			AuthService: testEnv.Services.Auth,
-			userService: testEnv.Services.User,
-			config:      testEnv.Config,
-			logger:      testEnv.Logger,
+			AuthService: authService,
+			UserService: userService,
+			Config:      cfg,
+			Logger:      logger,
 		},
-		Message: handlers.NewMessageHandler(
-			testEnv.Services.Message,
-			testEnv.Services.User,
-			testEnv.Logger,
-		),
-		Contact: handlers.NewContactHandler(
-			testEnv.Services.Contact,
-			testEnv.Logger,
-		),
-		Key: handlers.NewKeyHandler(
-			testEnv.Services.User,
-			testEnv.Logger,
-		),
-		Account: handlers.NewAccountHandler(
-			testEnv.Services.Account,
-			testEnv.Services.Auth,
-			testEnv.Logger,
-		),
-		logger: testEnv.Logger,
+		logger: logger,
 	}
 
-	// Create health checker
-	healthChecker := health.New(testEnv.DB.Pool, testEnv.Logger)
+	// Setup health checker
+	healthChecker := health.New(db.Pool, logger)
+
+	// Configure middleware
+	middleware.SetupMiddleware(e, cfg, logger, authService)
 
 	// Configure routes
-	api.SetupRoutes(e, h, testEnv.Config, testEnv.Services.Auth, healthChecker, testEnv.Logger)
+	api.SetupRoutes(e, handler, cfg, authService, healthChecker, logger)
 
-	// Start server
-	ts := httptest.NewServer(e)
+	// Create test server
+	server := httptest.NewServer(e)
 
-	// Return server and cleanup function
-	return ts, func() {
-		ts.Close()
+	return &TestEnv{
+		Echo:        e,
+		Config:      cfg,
+		Logger:      logger,
+		DB:          db,
+		UserService: userService,
+		AuthService: authService,
+		Handler:     handler,
+		Server:      server,
 	}
 }
 
-// NewJSONBody creates a new JSON request body
-func NewJSONBody(data interface{}) io.Reader {
-	b, _ := json.Marshal(data)
-	return bytes.NewReader(b)
+// TearDown cleans up the test environment
+func (env *TestEnv) TearDown() {
+	if env.Server != nil {
+		env.Server.Close()
+	}
+	if env.DB != nil {
+		env.DB.Close()
+	}
 }
 
-// ReadJSONBody reads and parses a JSON response body
-func ReadJSONBody(t *testing.T, body io.Reader, v interface{}) {
-	b, err := io.ReadAll(body)
-	if err != nil {
-		t.Fatalf("Failed to read response body: %v", err)
-	}
+// CreateTestUser creates a test user
+func (env *TestEnv) CreateTestUser(t *testing.T, username string) (string, string) {
+	// Generate a test key pair
+	publicKey := make([]byte, 800)            // Dummy public key
+	encryptedPrivateKey := make([]byte, 1200) // Dummy encrypted private key
+	salt := make([]byte, 16)                  // Dummy salt
 
-	err = json.Unmarshal(b, v)
-	if err != nil {
-		t.Fatalf("Failed to parse response body: %v", err)
-	}
+	// Register user
+	userID := security.HashUsername(username)
+	token, err := env.AuthService.Login(context.Background(), username)
+	require.NoError(t, err, "Failed to login")
+
+	return userID, token
+}
+
+// GetAuthHeader returns an authentication header
+func (env *TestEnv) GetAuthHeader(token string) http.Header {
+	header := http.Header{}
+	header.Set("Authorization", "Bearer "+token)
+	return header
+}
+
+// GetBase64 encodes a byte slice as URL-safe base64
+func GetBase64(data []byte) string {
+	return base64.URLEncoding.EncodeToString(data)
 }

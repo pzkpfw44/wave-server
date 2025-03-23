@@ -3,110 +3,78 @@ package yugabytedb
 import (
 	"context"
 	"fmt"
-	"time"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
-// Connection represents a connection to YugabyteDB
-type Connection struct {
-	Pool   *pgxpool.Pool
-	Logger *zap.Logger
+// Config defines YugabyteDB-specific configuration
+type Config struct {
+	Host         string
+	Port         int
+	User         string
+	Password     string
+	Database     string
+	MaxPoolSize  int
+	MinPoolSize  int
+	ConnLifetime int // seconds
 }
 
-// ConnectOptions defines options for connecting to YugabyteDB
-type ConnectOptions struct {
-	Host           string
-	Port           int
-	User           string
-	Password       string
-	Database       string
-	PoolSize       int
-	ConnectTimeout time.Duration
-	SSLMode        string
-}
-
-// Connect creates a new connection to YugabyteDB
-func Connect(ctx context.Context, opts ConnectOptions, logger *zap.Logger) (*Connection, error) {
+// Connect establishes a connection to YugabyteDB
+func Connect(ctx context.Context, cfg Config, logger *zap.Logger) (*pgxpool.Pool, error) {
 	// Build connection string
 	connString := fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s?sslmode=%s&pool_max_conns=%d",
-		opts.User,
-		opts.Password,
-		opts.Host,
-		opts.Port,
-		opts.Database,
-		opts.SSLMode,
-		opts.PoolSize,
+		"postgresql://%s:%s@%s:%d/%s?application_name=wave-server",
+		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database,
 	)
 
-	if opts.ConnectTimeout > 0 {
-		connString = fmt.Sprintf("%s&connect_timeout=%d", connString, int(opts.ConnectTimeout.Seconds()))
-	}
-
-	// Create connection pool
-	config, err := pgxpool.ParseConfig(connString)
+	// Create a pool config
+	poolConfig, err := pgxpool.ParseConfig(connString)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse connection string: %w", err)
 	}
 
-	// YugabyteDB-specific optimizations
-	config.MaxConns = int32(opts.PoolSize)
-	config.MinConns = 1
-	config.MaxConnLifetime = 1 * time.Hour
-	config.MaxConnIdleTime = 30 * time.Minute
-	config.HealthCheckPeriod = 30 * time.Second // Increased for YugabyteDB
+	// Configure pool settings
+	if cfg.MaxPoolSize > 0 {
+		poolConfig.MaxConns = int32(cfg.MaxPoolSize)
+	}
+	if cfg.MinPoolSize > 0 {
+		poolConfig.MinConns = int32(cfg.MinPoolSize)
+	}
 
-	// Create connection pool
-	pool, err := pgxpool.NewWithConfig(ctx, config)
+	// Create the connection pool
+	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create connection pool: %w", err)
 	}
 
-	// Verify connection
+	// Test the connection
 	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	logger.Info("Connected to YugabyteDB",
-		zap.String("host", opts.Host),
-		zap.Int("port", opts.Port),
-		zap.String("database", opts.Database),
-		zap.Int("pool_size", opts.PoolSize),
-	)
-
-	return &Connection{
-		Pool:   pool,
-		Logger: logger.With(zap.String("component", "yugabytedb")),
-	}, nil
-}
-
-// CheckIsYugabyteDB checks if the database is a YugabyteDB instance
-func (c *Connection) CheckIsYugabyteDB(ctx context.Context) (bool, error) {
-	// Try to query YugabyteDB-specific system tables
-	var count int
-	err := c.Pool.QueryRow(ctx, "SELECT COUNT(*) FROM pg_catalog.pg_class WHERE relname = 'yb_servers'").Scan(&count)
+	// Check if using YugabyteDB
+	var version string
+	err = pool.QueryRow(ctx, "SELECT version()").Scan(&version)
 	if err != nil {
-		c.Logger.Warn("Failed to check if database is YugabyteDB", zap.Error(err))
-		return false, nil
+		pool.Close()
+		return nil, fmt.Errorf("failed to get database version: %w", err)
 	}
 
-	isYugabyte := count > 0
-	if isYugabyte {
-		c.Logger.Info("Connected to YugabyteDB instance")
+	if !isYugabyteDB(version) {
+		logger.Warn("Not connected to YugabyteDB, some features may not work properly",
+			zap.String("version", version))
 	} else {
-		c.Logger.Info("Connected to PostgreSQL instance (not YugabyteDB)")
+		logger.Info("Connected to YugabyteDB", zap.String("version", version))
 	}
 
-	return isYugabyte, nil
+	return pool, nil
 }
 
-// Close closes the connection pool
-func (c *Connection) Close() {
-	if c.Pool != nil {
-		c.Pool.Close()
-		c.Logger.Info("Closed YugabyteDB connection pool")
-	}
+// isYugabyteDB checks if the version string indicates YugabyteDB
+func isYugabyteDB(version string) bool {
+	return strings.Contains(strings.ToLower(version), "yugabytedb") ||
+		strings.Contains(strings.ToLower(version), "yb")
 }
