@@ -19,6 +19,7 @@ func SetupMiddleware(e *echo.Echo, cfg *config.Config, logger *zap.Logger, authS
 	loggingMiddleware := NewLoggingMiddleware(logger)
 	corsMiddleware := NewCORSMiddleware(logger, cfg)
 	authMiddleware := NewAuthMiddleware(authService, logger)
+	metricsMiddleware := NewMetricsMiddleware(logger)
 
 	// Setup rate limiters
 	// General rate limiter: 100 requests per minute
@@ -36,6 +37,10 @@ func SetupMiddleware(e *echo.Echo, cfg *config.Config, logger *zap.Logger, authS
 	e.Use(corsMiddleware.CORS())
 	e.Use(middleware.Secure())
 	e.Use(generalRateLimiter.Limit())
+	e.Use(metricsMiddleware.Metrics())
+
+	// Register metrics endpoint
+	metricsMiddleware.SetupMetricsEndpoint(e)
 
 	// Create auth group
 	authGroup := e.Group("/api/v1/auth")
