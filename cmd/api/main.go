@@ -12,13 +12,13 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 
-	"github.com/yourusername/wave-server/internal/api"
-	"github.com/yourusername/wave-server/internal/api/handlers"
-	"github.com/yourusername/wave-server/internal/api/middleware"
-	"github.com/yourusername/wave-server/internal/config"
-	"github.com/yourusername/wave-server/internal/repository"
-	"github.com/yourusername/wave-server/pkg/health"
-	"github.com/yourusername/wave-server/pkg/logger"
+	"github.com/pzkpfw44/wave-server/internal/api"
+	"github.com/pzkpfw44/wave-server/internal/api/handlers"
+	"github.com/pzkpfw44/wave-server/internal/api/middleware"
+	"github.com/pzkpfw44/wave-server/internal/config"
+	"github.com/pzkpfw44/wave-server/internal/repository"
+	"github.com/pzkpfw44/wave-server/pkg/health"
+	"github.com/pzkpfw44/wave-server/pkg/logger"
 )
 
 func main() {

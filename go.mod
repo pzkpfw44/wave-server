@@ -1,4 +1,4 @@
-module github.com/yourusername/wave-server
+module github.com/pzkpfw44/wave-server
 
 go 1.22
 

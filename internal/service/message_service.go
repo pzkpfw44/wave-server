@@ -7,9 +7,9 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/yourusername/wave-server/internal/domain"
-	"github.com/yourusername/wave-server/internal/errors"
-	"github.com/yourusername/wave-server/internal/repository"
+	"github.com/pzkpfw44/wave-server/internal/domain"
+	"github.com/pzkpfw44/wave-server/internal/errors"
+	"github.com/pzkpfw44/wave-server/internal/repository"
 )
 
 // MessageService provides message business logic

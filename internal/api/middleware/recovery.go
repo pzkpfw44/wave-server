@@ -8,7 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 
-	"github.com/yourusername/wave-server/internal/api/response"
+	"github.com/pzkpfw44/wave-server/internal/api/response"
 )
 
 // RecoveryMiddleware handles panic recovery

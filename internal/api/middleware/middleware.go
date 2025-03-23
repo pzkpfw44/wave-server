@@ -7,9 +7,9 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/zap"
 
-	"github.com/yourusername/wave-server/internal/api/request"
-	"github.com/yourusername/wave-server/internal/config"
-	"github.com/yourusername/wave-server/internal/service"
+	"github.com/pzkpfw44/wave-server/internal/api/request"
+	"github.com/pzkpfw44/wave-server/internal/config"
+	"github.com/pzkpfw44/wave-server/internal/service"
 )
 
 // SetupMiddleware configures all middleware for the API

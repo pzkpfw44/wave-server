@@ -7,10 +7,10 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/yourusername/wave-server/internal/domain"
-	"github.com/yourusername/wave-server/internal/errors"
-	"github.com/yourusername/wave-server/internal/repository"
-	"github.com/yourusername/wave-server/internal/security"
+	"github.com/pzkpfw44/wave-server/internal/domain"
+	"github.com/pzkpfw44/wave-server/internal/errors"
+	"github.com/pzkpfw44/wave-server/internal/repository"
+	"github.com/pzkpfw44/wave-server/internal/security"
 )
 
 // UserService provides user business logic

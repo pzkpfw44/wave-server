@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
-	"github.com/yourusername/wave-server/internal/config"
+	"github.com/pzkpfw44/wave-server/internal/config"
 )
 
 // Database represents a connection to the database

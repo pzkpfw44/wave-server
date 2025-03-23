@@ -34,7 +34,7 @@ The system is designed with a zero-knowledge architecture where all encryption a
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/wave-server.git
+   git clone https://github.com/pzkpfw44/wave-server.git
    cd wave-server
    ```
 

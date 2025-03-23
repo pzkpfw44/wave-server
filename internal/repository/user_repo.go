@@ -8,8 +8,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 
-	"github.com/yourusername/wave-server/internal/domain"
-	"github.com/yourusername/wave-server/internal/errors"
+	"github.com/pzkpfw44/wave-server/internal/domain"
+	"github.com/pzkpfw44/wave-server/internal/errors"
 )
 
 // UserRepository handles user data storage operations

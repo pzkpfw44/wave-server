@@ -6,12 +6,12 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 
-	"github.com/yourusername/wave-server/internal/api/middleware"
-	"github.com/yourusername/wave-server/internal/api/request"
-	"github.com/yourusername/wave-server/internal/api/response"
-	"github.com/yourusername/wave-server/internal/config"
-	"github.com/yourusername/wave-server/internal/errors"
-	"github.com/yourusername/wave-server/internal/service"
+	"github.com/pzkpfw44/wave-server/internal/api/middleware"
+	"github.com/pzkpfw44/wave-server/internal/api/request"
+	"github.com/pzkpfw44/wave-server/internal/api/response"
+	"github.com/pzkpfw44/wave-server/internal/config"
+	"github.com/pzkpfw44/wave-server/internal/errors"
+	"github.com/pzkpfw44/wave-server/internal/service"
 )
 
 // AuthHandler handles authentication-related requests

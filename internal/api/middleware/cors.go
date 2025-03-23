@@ -5,7 +5,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/zap"
 
-	"github.com/yourusername/wave-server/internal/config"
+	"github.com/pzkpfw44/wave-server/internal/config"
 )
 
 // CORSMiddleware handles CORS configuration

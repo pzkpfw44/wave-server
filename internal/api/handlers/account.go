@@ -6,11 +6,11 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 
-	"github.com/yourusername/wave-server/internal/api/middleware"
-	"github.com/yourusername/wave-server/internal/api/request"
-	"github.com/yourusername/wave-server/internal/api/response"
-	"github.com/yourusername/wave-server/internal/errors"
-	"github.com/yourusername/wave-server/internal/service"
+	"github.com/pzkpfw44/wave-server/internal/api/middleware"
+	"github.com/pzkpfw44/wave-server/internal/api/request"
+	"github.com/pzkpfw44/wave-server/internal/api/response"
+	"github.com/pzkpfw44/wave-server/internal/errors"
+	"github.com/pzkpfw44/wave-server/internal/service"
 )
 
 // AccountHandler handles account-related requests
@@ -68,6 +68,14 @@ func (h *AccountHandler) RecoverAccount(c echo.Context) error {
 	var req request.RecoverAccountRequest
 	if err := request.ValidateRequest(c, &req); err != nil {
 		return err
+	}
+
+	// Additional validation for encrypted private key format
+	if req.EncryptedPrivateKey == nil ||
+		req.EncryptedPrivateKey["salt"] == "" ||
+		req.EncryptedPrivateKey["encrypted_key"] == "" {
+		return c.JSON(http.StatusBadRequest,
+			response.NewErrorResponse("Invalid encrypted private key format", "BAD_REQUEST"))
 	}
 
 	// Recover account

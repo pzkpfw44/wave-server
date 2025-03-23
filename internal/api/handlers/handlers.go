@@ -1,12 +1,13 @@
 package handlers
 
 import (
-	"github.com/labstack/echo/v4"
+	"context"
+
 	"go.uber.org/zap"
 
-	"github.com/yourusername/wave-server/internal/config"
-	"github.com/yourusername/wave-server/internal/repository"
-	"github.com/yourusername/wave-server/internal/service"
+	"github.com/pzkpfw44/wave-server/internal/config"
+	"github.com/pzkpfw44/wave-server/internal/repository"
+	"github.com/pzkpfw44/wave-server/internal/service"
 )
 
 // Handler is a container for all handlers
@@ -34,8 +35,9 @@ func NewHandler(db *repository.Database, cfg *config.Config, logger *zap.Logger)
 	contactService := service.NewContactService(contactRepo, logger)
 	accountService := service.NewAccountService(userRepo, contactRepo, messageRepo, tokenRepo, logger)
 
-	// Schedule token cleanup
-	authService.ScheduleTokenCleanup(echo.Context(nil).Request().Context())
+	// Schedule token cleanup with a proper background context
+	ctx := context.Background()
+	authService.ScheduleTokenCleanup(ctx)
 
 	// Create handlers
 	authHandler := NewAuthHandler(authService, userService, cfg, logger)

@@ -15,10 +15,10 @@ import (
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 
-	"github.com/yourusername/wave-server/internal/config"
-	"github.com/yourusername/wave-server/internal/repository"
-	"github.com/yourusername/wave-server/internal/security"
-	"github.com/yourusername/wave-server/pkg/logger"
+	"github.com/pzkpfw44/wave-server/internal/config"
+	"github.com/pzkpfw44/wave-server/internal/repository"
+	"github.com/pzkpfw44/wave-server/internal/security"
+	"github.com/pzkpfw44/wave-server/pkg/logger"
 )
 
 // FilesystemUser represents a user from the file-based storage

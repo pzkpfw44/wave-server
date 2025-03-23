@@ -9,7 +9,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 
-	"github.com/yourusername/wave-server/internal/errors"
+	"github.com/pzkpfw44/wave-server/internal/errors"
 )
 
 // CustomValidator is a custom validator for Echo
