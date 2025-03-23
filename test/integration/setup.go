@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -132,7 +135,58 @@ func (m *mockDBPool) Ping(ctx context.Context) error {
 	return nil
 }
 
-// Exec, QueryRow, and Query would be implemented here for a complete mock
+// Exec implements the Pool.Exec method
+func (m *mockDBPool) Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error) {
+	return pgconn.CommandTag{}, nil
+}
+
+// Query implements the Pool.Query method
+func (m *mockDBPool) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
+	return nil, nil
+}
+
+// QueryRow implements the Pool.QueryRow method
+func (m *mockDBPool) QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row {
+	return nil
+}
+
+// Begin implements the Pool.Begin method
+func (m *mockDBPool) Begin(ctx context.Context) (pgx.Tx, error) {
+	return nil, nil
+}
+
+// BeginTx implements the Pool.BeginTx method
+func (m *mockDBPool) BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error) {
+	return nil, nil
+}
+
+// Acquire implements the Pool.Acquire method
+func (m *mockDBPool) Acquire(ctx context.Context) (*pgxpool.Conn, error) {
+	return nil, nil
+}
+
+// AcquireFunc implements the Pool.AcquireFunc method
+func (m *mockDBPool) AcquireFunc(ctx context.Context, f func(*pgxpool.Conn) error) error {
+	return nil
+}
+
+// AcquireAllIdle implements the Pool.AcquireAllIdle method
+func (m *mockDBPool) AcquireAllIdle(ctx context.Context) []*pgxpool.Conn {
+	return nil
+}
+
+// Config implements the Pool.Config method
+func (m *mockDBPool) Config() *pgxpool.Config {
+	return nil
+}
+
+// Stat implements the Pool.Stat method
+func (m *mockDBPool) Stat() *pgxpool.Stat {
+	return nil
+}
+
+// Reset implements the Pool.Reset method
+func (m *mockDBPool) Reset() {}
 
 // Helper functions for tests
 

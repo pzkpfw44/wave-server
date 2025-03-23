@@ -69,7 +69,7 @@ func main() {
 	contactRepo := repository.NewContactRepository(db)
 
 	// Create extractor
-	extractor := NewExtractor(sourceDir, log)
+	extractor := NewExtractorTool(sourceDir, log)
 
 	// Verify that source directory exists
 	if _, err := os.Stat(sourceDir); os.IsNotExist(err) {
@@ -86,22 +86,22 @@ func main() {
 	log.Info("Migration completed successfully")
 }
 
-// Extractor extracts data from the old file-based storage system
-type Extractor struct {
+// ExtractorTool extracts data from the old file-based storage system
+type ExtractorTool struct {
 	sourceDir string
 	logger    *zap.Logger
 }
 
-// NewExtractor creates a new extractor
-func NewExtractor(sourceDir string, logger *zap.Logger) *Extractor {
-	return &Extractor{
+// NewExtractorTool creates a new extractor
+func NewExtractorTool(sourceDir string, logger *zap.Logger) *ExtractorTool {
+	return &ExtractorTool{
 		sourceDir: sourceDir,
 		logger:    logger.With(zap.String("component", "extractor")),
 	}
 }
 
 // ExtractUsers extracts users from the old file-based storage
-func (e *Extractor) ExtractUsers() ([]*domain.User, error) {
+func (e *ExtractorTool) ExtractUsers() ([]*domain.User, error) {
 	userDir := filepath.Join(e.sourceDir, "extension_wave_keys")
 	e.logger.Info("Extracting users", zap.String("directory", userDir))
 
@@ -186,7 +186,7 @@ func (e *Extractor) ExtractUsers() ([]*domain.User, error) {
 }
 
 // ExtractContacts extracts contacts from the old file-based storage
-func (e *Extractor) ExtractContacts() ([]*domain.Contact, error) {
+func (e *ExtractorTool) ExtractContacts() ([]*domain.Contact, error) {
 	contactDir := filepath.Join(e.sourceDir, "extension_wave_contacts")
 	e.logger.Info("Extracting contacts", zap.String("directory", contactDir))
 
@@ -250,7 +250,7 @@ func (e *Extractor) ExtractContacts() ([]*domain.Contact, error) {
 }
 
 // ExtractMessages extracts messages from the old file-based storage
-func (e *Extractor) ExtractMessages() ([]*domain.Message, error) {
+func (e *ExtractorTool) ExtractMessages() ([]*domain.Message, error) {
 	messageDir := filepath.Join(e.sourceDir, "extension_wave_messages")
 	e.logger.Info("Extracting messages", zap.String("directory", messageDir))
 
@@ -395,7 +395,7 @@ func (e *Extractor) ExtractMessages() ([]*domain.Message, error) {
 }
 
 // RunMigration runs the migration process
-func RunMigration(ctx context.Context, extractor *Extractor, userRepo *repository.UserRepository,
+func RunMigration(ctx context.Context, extractor *ExtractorTool, userRepo *repository.UserRepository,
 	messageRepo *repository.MessageRepository, contactRepo *repository.ContactRepository,
 	log *zap.Logger, dryRun bool) error {
 
