@@ -1,6 +1,4 @@
-// rename the file from migrate-data.go to migrate_data.go to resolve package conflicts
-
-package main
+package migration_tool
 
 import (
 	"context"
@@ -28,27 +26,25 @@ var (
 	sourceDir = getEnvOrDefault("SOURCE_DIR", "./old_data")
 )
 
-func main() {
+// RunMigrationTool is the main entry point for the migration tool
+func RunMigrationTool(source string, logLevel string, isDev bool) error {
+	if source != "" {
+		sourceDir = source
+	}
+
 	// Load .env file if it exists
 	_ = godotenv.Load()
-
-	// Parse command line flags
-	if len(os.Args) > 1 {
-		sourceDir = os.Args[1]
-	}
 
 	// Load config
 	cfg, err := config.Load()
 	if err != nil {
-		fmt.Printf("Failed to load configuration: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to load configuration: %v", err)
 	}
 
 	// Setup logger
-	log, err := logger.New(cfg.LogLevel, cfg.IsDevelopment())
+	log, err := logger.New(logLevel, isDev)
 	if err != nil {
-		fmt.Printf("Failed to create logger: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to create logger: %v", err)
 	}
 	defer logger.Sync(log)
 
@@ -60,6 +56,7 @@ func main() {
 	db, err := repository.New(ctx, cfg, log)
 	if err != nil {
 		log.Fatal("Failed to connect to database", zap.Error(err))
+		return fmt.Errorf("failed to connect to database: %v", err)
 	}
 	defer db.Close()
 
@@ -74,6 +71,7 @@ func main() {
 	// Verify that source directory exists
 	if _, err := os.Stat(sourceDir); os.IsNotExist(err) {
 		log.Fatal("Source directory does not exist", zap.String("directory", sourceDir))
+		return fmt.Errorf("source directory does not exist: %s", sourceDir)
 	}
 
 	// Run migration
@@ -81,9 +79,11 @@ func main() {
 	err = RunMigration(ctx, extractor, userRepo, messageRepo, contactRepo, log, dryRun)
 	if err != nil {
 		log.Fatal("Migration failed", zap.Error(err))
+		return fmt.Errorf("migration failed: %v", err)
 	}
 
 	log.Info("Migration completed successfully")
+	return nil
 }
 
 // ExtractorTool extracts data from the old file-based storage system

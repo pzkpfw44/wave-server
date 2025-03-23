@@ -29,17 +29,24 @@ import (
 
 // TestEnv represents the test environment
 type TestEnv struct {
-	Server      *httptest.Server
-	Echo        *echo.Echo
-	Config      *config.Config
-	Logger      *zap.Logger
-	UserRepo    *repository.UserRepository
-	TokenRepo   *repository.TokenRepository
-	Security    *security.SecurityTestHelper
-	AuthService *service.AuthService
+	Server         *httptest.Server
+	Echo           *echo.Echo
+	Config         *config.Config
+	Logger         *zap.Logger
+	UserRepo       *repository.UserRepository
+	TokenRepo      *repository.TokenRepository
+	Security       *security.SecurityTestHelper
+	AuthService    *service.AuthService
+	UserService    *service.UserService    // Added field
+	MessageService *service.MessageService // Added field
+	ContactService *service.ContactService // Added field
+	AccountService *service.AccountService // Added field
 }
 
 var testEnv *TestEnv
+
+// Ensure mockDBPool implements pgxpool.Pool interface
+var _ pgxpool.Pool = (*mockDBPool)(nil)
 
 // setupTestServer sets up a test server and returns it along with a cleanup function
 func setupTestServer(t *testing.T) (*httptest.Server, func()) {
@@ -89,14 +96,18 @@ func setupTestServer(t *testing.T) (*httptest.Server, func()) {
 
 	// Store test environment
 	testEnv = &TestEnv{
-		Server:      server,
-		Echo:        e,
-		Config:      cfg,
-		Logger:      logger,
-		UserRepo:    userRepo,
-		TokenRepo:   tokenRepo,
-		Security:    &security.SecurityTestHelper{}, // Mock security helper for tests
-		AuthService: authService,
+		Server:         server,
+		Echo:           e,
+		Config:         cfg,
+		Logger:         logger,
+		UserRepo:       userRepo,
+		TokenRepo:      tokenRepo,
+		Security:       &security.SecurityTestHelper{},
+		AuthService:    authService,
+		UserService:    userService,    // Store the service
+		MessageService: messageService, // Store the service
+		ContactService: contactService, // Store the service
+		AccountService: accountService, // Store the service
 	}
 
 	// Return cleanup function
@@ -112,13 +123,20 @@ func setupTestDatabase(t *testing.T) *repository.Database {
 	// This is a simplified version - in a real implementation,
 	// you would use an actual in-memory database like SQLite
 
+	// Create logger
+	logger := zaptest.NewLogger(t)
+
+	// Create config
+	cfg := &config.Config{}
+
 	// Here we're just returning a mock DB object for testing
 	pool := &mockDBPool{t: t}
 
+	// Create the database object with the mock pool
 	return &repository.Database{
-		Pool:   pool,
-		Logger: zaptest.NewLogger(t),
-		Config: &config.Config{},
+		Pool:   pool, // This is now valid since mockDBPool implements pgxpool.Pool
+		Logger: logger,
+		Config: cfg,
 	}
 }
 
