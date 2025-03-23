@@ -11,18 +11,15 @@ services:
       - YB_MASTER_ARGS=--replication_factor=1
     command: bin/yugabyted start --daemon=false
     healthcheck:
-      # Relaxed healthcheck to give more time for initialization
-      test: ["CMD-SHELL", "bin/yugabyted status || exit 0"]
-      interval: 30s
-      timeout: 60s
-      retries: 3
-      start_period: 60s
+      test: ["CMD-SHELL", "bin/yugabyted status && echo 'YugabyteDB is healthy' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
 
-  # Go API service - Using development mode
+  # Go API service
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     ports:
       - "8080:8080"
     volumes:
@@ -38,10 +35,16 @@ services:
       - ENVIRONMENT=development
       - LOG_LEVEL=debug
     depends_on:
-      - yugabytedb
-    # Override the Dockerfile's ENTRYPOINT with a development command
-    entrypoint: ["go", "run", "cmd/api/main.go"]
-    working_dir: /app
+      yugabytedb:
+        condition: service_healthy
+    # Add a wait script to give YugabyteDB extra time
+    command: >
+      sh -c "
+      echo 'Waiting for YugabyteDB to be ready...' &&
+      sleep 10 &&
+      echo 'Starting API server...' &&
+      go run cmd/api/main.go
+      "
 
 volumes:
   yugabyte_data:
