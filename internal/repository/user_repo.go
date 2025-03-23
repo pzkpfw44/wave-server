@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"go.uber.org/zap"
 
 	"github.com/pzkpfw44/wave-server/internal/domain"
@@ -47,7 +48,7 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 		r.logger.Error("Failed to create user", zap.Error(err), zap.String("username", user.Username))
 
 		// Check for unique constraint violation
-		if pgErr, ok := err.(*pgx.PgError); ok && pgErr.Code == "23505" {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 			if pgErr.ConstraintName == "users_username_key" {
 				return errors.NewConflictError(fmt.Sprintf("User with username '%s' already exists", user.Username))
 			}

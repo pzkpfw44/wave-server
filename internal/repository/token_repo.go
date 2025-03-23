@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"go.uber.org/zap"
 
 	"github.com/pzkpfw44/wave-server/internal/domain"
@@ -51,7 +52,7 @@ func (r *TokenRepository) Create(ctx context.Context, token *domain.Token) error
 			zap.String("token_id", token.TokenID.String()))
 
 		// Check for unique constraint violation
-		if pgErr, ok := err.(*pgx.PgError); ok && pgErr.Code == "23505" {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 			return errors.NewConflictError("Token hash already exists")
 		}
 

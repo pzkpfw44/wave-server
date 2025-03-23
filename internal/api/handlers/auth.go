@@ -16,7 +16,7 @@ import (
 
 // AuthHandler handles authentication-related requests
 type AuthHandler struct {
-	authService *service.AuthService
+	AuthService *service.AuthService // Changed from authService to AuthService (exported field)
 	userService *service.UserService
 	config      *config.Config
 	logger      *zap.Logger
@@ -30,7 +30,7 @@ func NewAuthHandler(
 	logger *zap.Logger,
 ) *AuthHandler {
 	return &AuthHandler{
-		authService: authService,
+		AuthService: authService, // Changed from authService to AuthService
 		userService: userService,
 		config:      config,
 		logger:      logger.With(zap.String("handler", "auth")),
@@ -45,7 +45,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	}
 
 	// Register user
-	user, err := h.userService.Register(
+	_, err := h.userService.Register( // Changed to ignore the user return value since it's not used
 		c.Request().Context(),
 		req.Username,
 		req.PublicKey,
@@ -61,7 +61,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	}
 
 	// Generate token
-	token, err := h.authService.Login(c.Request().Context(), req.Username)
+	token, err := h.AuthService.Login(c.Request().Context(), req.Username)
 	if err != nil {
 		if appErr, ok := errors.IsAppError(err); ok {
 			return c.JSON(appErr.Status, response.NewErrorResponse(appErr.Message, appErr.Code))
@@ -88,7 +88,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	}
 
 	// Generate token
-	token, err := h.authService.Login(c.Request().Context(), req.Username)
+	token, err := h.AuthService.Login(c.Request().Context(), req.Username)
 	if err != nil {
 		if appErr, ok := errors.IsAppError(err); ok {
 			return c.JSON(appErr.Status, response.NewErrorResponse(appErr.Message, appErr.Code))
@@ -122,7 +122,7 @@ func (h *AuthHandler) RefreshToken(c echo.Context) error {
 	}
 
 	// Refresh token
-	newToken, err := h.authService.RefreshToken(c.Request().Context(), token)
+	newToken, err := h.AuthService.RefreshToken(c.Request().Context(), token)
 	if err != nil {
 		if appErr, ok := errors.IsAppError(err); ok {
 			return c.JSON(appErr.Status, response.NewErrorResponse(appErr.Message, appErr.Code))
@@ -156,7 +156,7 @@ func (h *AuthHandler) Logout(c echo.Context) error {
 	}
 
 	// Invalidate token
-	if err := h.authService.Logout(c.Request().Context(), token); err != nil {
+	if err := h.AuthService.Logout(c.Request().Context(), token); err != nil {
 		if appErr, ok := errors.IsAppError(err); ok {
 			return c.JSON(appErr.Status, response.NewErrorResponse(appErr.Message, appErr.Code))
 		}
@@ -176,7 +176,7 @@ func (h *AuthHandler) LogoutAll(c echo.Context) error {
 	}
 
 	// Invalidate all tokens
-	if err := h.authService.LogoutAll(c.Request().Context(), userID); err != nil {
+	if err := h.AuthService.LogoutAll(c.Request().Context(), userID); err != nil {
 		if appErr, ok := errors.IsAppError(err); ok {
 			return c.JSON(appErr.Status, response.NewErrorResponse(appErr.Message, appErr.Code))
 		}

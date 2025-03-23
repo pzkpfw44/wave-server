@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"go.uber.org/zap"
 
 	"github.com/pzkpfw44/wave-server/internal/domain"
@@ -46,7 +47,7 @@ func (r *ContactRepository) Create(ctx context.Context, contact *domain.Contact)
 			zap.String("contact_pubkey", contact.ContactPubKey))
 
 		// Check for unique constraint violation
-		if pgErr, ok := err.(*pgx.PgError); ok && pgErr.Code == "23505" {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 			return errors.NewConflictError(fmt.Sprintf("Contact with public key '%s' already exists for this user", contact.ContactPubKey))
 		}
 

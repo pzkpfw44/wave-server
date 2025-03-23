@@ -260,12 +260,6 @@ func (h *MessageHandler) GetConversation(c echo.Context) error {
 
 // UpdateMessageStatus updates a message's status
 func (h *MessageHandler) UpdateMessageStatus(c echo.Context) error {
-	// Get user ID from context
-	userID, err := middleware.GetUserID(c)
-	if err != nil {
-		return err
-	}
-
 	// Parse message ID
 	messageIDStr := c.Param("message_id")
 	if messageIDStr == "" {
