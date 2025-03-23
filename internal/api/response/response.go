@@ -1,5 +1,44 @@
 package response
 
+// Response is the base API response format
+type Response struct {
+	Success bool        `json:"success"`
+	Data    interface{} `json:"data,omitempty"`
+	Error   *ErrorInfo  `json:"error,omitempty"`
+}
+
+// ErrorInfo contains error details
+type ErrorInfo struct {
+	Message string `json:"message"`
+	Code    string `json:"code"`
+}
+
+// NewSuccessResponse creates a new success response
+func NewSuccessResponse(data interface{}) Response {
+	return Response{
+		Success: true,
+		Data:    data,
+	}
+}
+
+// NewErrorResponse creates a new error response
+func NewErrorResponse(message, code string) Response {
+	return Response{
+		Success: false,
+		Error: &ErrorInfo{
+			Message: message,
+			Code:    code,
+		},
+	}
+}
+
+// TokenResponse is the response for token requests
+type TokenResponse struct {
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	ExpiresIn   int    `json:"expires_in"` // Seconds
+}
+
 // MessageResponse is the response for message operations
 type MessageResponse struct {
 	MessageID           string `json:"message_id"`

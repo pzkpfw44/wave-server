@@ -35,12 +35,7 @@ func NewHandler(db *repository.Database, cfg *config.Config, logger *zap.Logger)
 
 	// Create handlers
 	return &Handler{
-		Auth: &AuthHandler{
-			authService: authService,
-			userService: userService,
-			config:      cfg,
-			logger:      logger,
-		},
+		Auth:    NewAuthHandler(authService, userService, cfg, logger),
 		Message: NewMessageHandler(messageService, userService, logger),
 		Contact: NewContactHandler(contactService, logger),
 		Key:     NewKeyHandler(userService, logger),
