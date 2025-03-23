@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"context"
-
 	"go.uber.org/zap"
 
 	"github.com/pzkpfw44/wave-server/internal/config"
@@ -35,23 +33,18 @@ func NewHandler(db *repository.Database, cfg *config.Config, logger *zap.Logger)
 	contactService := service.NewContactService(contactRepo, logger)
 	accountService := service.NewAccountService(userRepo, contactRepo, messageRepo, tokenRepo, logger)
 
-	// Schedule token cleanup with a proper background context
-	ctx := context.Background()
-	authService.ScheduleTokenCleanup(ctx)
-
 	// Create handlers
-	authHandler := NewAuthHandler(authService, userService, cfg, logger)
-	messageHandler := NewMessageHandler(messageService, userService, logger)
-	contactHandler := NewContactHandler(contactService, logger)
-	keyHandler := NewKeyHandler(userService, logger)
-	accountHandler := NewAccountHandler(accountService, authService, logger)
-
 	return &Handler{
-		Auth:    authHandler,
-		Message: messageHandler,
-		Contact: contactHandler,
-		Key:     keyHandler,
-		Account: accountHandler,
+		Auth: &AuthHandler{
+			authService: authService,
+			userService: userService,
+			config:      cfg,
+			logger:      logger,
+		},
+		Message: NewMessageHandler(messageService, userService, logger),
+		Contact: NewContactHandler(contactService, logger),
+		Key:     NewKeyHandler(userService, logger),
+		Account: NewAccountHandler(accountService, authService, logger),
 		logger:  logger,
 	}
 }

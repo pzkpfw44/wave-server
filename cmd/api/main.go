@@ -12,13 +12,14 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 
-	"github.com/yourusername/wave-server/internal/api"
-	"github.com/yourusername/wave-server/internal/api/handlers"
-	"github.com/yourusername/wave-server/internal/api/middleware"
-	"github.com/yourusername/wave-server/internal/config"
-	"github.com/yourusername/wave-server/internal/repository"
-	"github.com/yourusername/wave-server/pkg/health"
-	"github.com/yourusername/wave-server/pkg/logger"
+	"github.com/pzkpfw44/wave-server/internal/api"
+	"github.com/pzkpfw44/wave-server/internal/api/handlers"
+	"github.com/pzkpfw44/wave-server/internal/api/middleware"
+	"github.com/pzkpfw44/wave-server/internal/config"
+	"github.com/pzkpfw44/wave-server/internal/repository"
+	"github.com/pzkpfw44/wave-server/internal/service"
+	"github.com/pzkpfw44/wave-server/pkg/health"
+	"github.com/pzkpfw44/wave-server/pkg/logger"
 )
 
 func main() {
@@ -57,17 +58,45 @@ func main() {
 	e := echo.New()
 	e.HideBanner = true
 
+	// Create repositories
+	userRepo := repository.NewUserRepository(db)
+	messageRepo := repository.NewMessageRepository(db)
+	contactRepo := repository.NewContactRepository(db)
+	tokenRepo := repository.NewTokenRepository(db)
+
+	// Create services
+	userService := service.NewUserService(userRepo, log)
+	authService := service.NewAuthService(userRepo, tokenRepo, cfg, log)
+	messageService := service.NewMessageService(messageRepo, userRepo, log)
+	contactService := service.NewContactService(contactRepo, log)
+	accountService := service.NewAccountService(userRepo, contactRepo, messageRepo, tokenRepo, log)
+
+	// Schedule token cleanup
+	authService.ScheduleTokenCleanup(ctx)
+
 	// Create handlers
-	h := handlers.NewHandler(db, cfg, log)
+	h := &handlers.Handler{
+		Auth: &handlers.AuthHandler{
+			authService: authService,
+			userService: userService,
+			config:      cfg,
+			logger:      log,
+		},
+		Message: handlers.NewMessageHandler(messageService, userService, log),
+		Contact: handlers.NewContactHandler(contactService, log),
+		Key:     handlers.NewKeyHandler(userService, log),
+		Account: handlers.NewAccountHandler(accountService, authService, log),
+		logger:  log,
+	}
 
 	// Setup health checker
 	healthChecker := health.New(db.Pool, log)
 
 	// Configure middleware
-	middleware.SetupMiddleware(e, cfg, log, h.Auth.AuthService) // Changed from authService to AuthService
+	middleware.SetupMiddleware(e, cfg, log, authService)
 
 	// Configure routes
-	api.SetupRoutes(e, h, cfg, h.Auth.AuthService, healthChecker, log) // Changed from authService to AuthService
+	api.SetupRoutes(e, h, cfg, authService, healthChecker, log)
 
 	// Start server
 	go func() {

@@ -6,20 +6,20 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 
-	"github.com/yourusername/wave-server/internal/api/middleware"
-	"github.com/yourusername/wave-server/internal/api/request"
-	"github.com/yourusername/wave-server/internal/api/response"
-	"github.com/yourusername/wave-server/internal/config"
-	"github.com/yourusername/wave-server/internal/errors"
-	"github.com/yourusername/wave-server/internal/service"
+	"github.com/pzkpfw44/wave-server/internal/api/middleware"
+	"github.com/pzkpfw44/wave-server/internal/api/request"
+	"github.com/pzkpfw44/wave-server/internal/api/response"
+	"github.com/pzkpfw44/wave-server/internal/config"
+	"github.com/pzkpfw44/wave-server/internal/errors"
+	"github.com/pzkpfw44/wave-server/internal/service"
 )
 
 // AuthHandler handles authentication-related requests
 type AuthHandler struct {
-	AuthService *service.AuthService // Changed from authService to AuthService (public field)
-	UserService *service.UserService // Changed from userService to UserService
-	Config      *config.Config       // Changed from config to Config
-	Logger      *zap.Logger          // Changed from logger to Logger
+	authService *service.AuthService
+	userService *service.UserService
+	config      *config.Config
+	logger      *zap.Logger
 }
 
 // NewAuthHandler creates a new auth handler
@@ -30,10 +30,10 @@ func NewAuthHandler(
 	logger *zap.Logger,
 ) *AuthHandler {
 	return &AuthHandler{
-		AuthService: authService,                                // Changed field name to public
-		UserService: userService,                                // Changed field name to public
-		Config:      config,                                     // Changed field name to public
-		Logger:      logger.With(zap.String("handler", "auth")), // Changed field name to public
+		authService: authService,
+		userService: userService,
+		config:      config,
+		logger:      logger.With(zap.String("handler", "auth")),
 	}
 }
 
@@ -45,7 +45,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	}
 
 	// Register user
-	user, err := h.UserService.Register(
+	user, err := h.userService.Register(
 		c.Request().Context(),
 		req.Username,
 		req.PublicKey,
@@ -56,17 +56,17 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		if appErr, ok := errors.IsAppError(err); ok {
 			return c.JSON(appErr.Status, response.NewErrorResponse(appErr.Message, appErr.Code))
 		}
-		h.Logger.Error("Registration failed", zap.Error(err))
+		h.logger.Error("Registration failed", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Registration failed", "INTERNAL"))
 	}
 
 	// Generate token
-	token, err := h.AuthService.Login(c.Request().Context(), req.Username)
+	token, err := h.authService.Login(c.Request().Context(), req.Username)
 	if err != nil {
 		if appErr, ok := errors.IsAppError(err); ok {
 			return c.JSON(appErr.Status, response.NewErrorResponse(appErr.Message, appErr.Code))
 		}
-		h.Logger.Error("Token generation failed", zap.Error(err))
+		h.logger.Error("Token generation failed", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Authentication failed", "INTERNAL"))
 	}
 
@@ -74,7 +74,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	tokenResponse := response.TokenResponse{
 		AccessToken: token,
 		TokenType:   "Bearer",
-		ExpiresIn:   int(h.Config.Auth.TokenExpiry.Seconds()),
+		ExpiresIn:   int(h.config.Auth.TokenExpiry.Seconds()),
 	}
 
 	return c.JSON(http.StatusCreated, response.NewSuccessResponse(tokenResponse))
@@ -88,12 +88,12 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	}
 
 	// Generate token
-	token, err := h.AuthService.Login(c.Request().Context(), req.Username)
+	token, err := h.authService.Login(c.Request().Context(), req.Username)
 	if err != nil {
 		if appErr, ok := errors.IsAppError(err); ok {
 			return c.JSON(appErr.Status, response.NewErrorResponse(appErr.Message, appErr.Code))
 		}
-		h.Logger.Error("Login failed", zap.Error(err))
+		h.logger.Error("Login failed", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Authentication failed", "INTERNAL"))
 	}
 
@@ -101,7 +101,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	tokenResponse := response.TokenResponse{
 		AccessToken: token,
 		TokenType:   "Bearer",
-		ExpiresIn:   int(h.Config.Auth.TokenExpiry.Seconds()),
+		ExpiresIn:   int(h.config.Auth.TokenExpiry.Seconds()),
 	}
 
 	return c.JSON(http.StatusOK, response.NewSuccessResponse(tokenResponse))
@@ -122,12 +122,12 @@ func (h *AuthHandler) RefreshToken(c echo.Context) error {
 	}
 
 	// Refresh token
-	newToken, err := h.AuthService.RefreshToken(c.Request().Context(), token)
+	newToken, err := h.authService.RefreshToken(c.Request().Context(), token)
 	if err != nil {
 		if appErr, ok := errors.IsAppError(err); ok {
 			return c.JSON(appErr.Status, response.NewErrorResponse(appErr.Message, appErr.Code))
 		}
-		h.Logger.Error("Token refresh failed", zap.Error(err))
+		h.logger.Error("Token refresh failed", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Token refresh failed", "INTERNAL"))
 	}
 
@@ -135,7 +135,7 @@ func (h *AuthHandler) RefreshToken(c echo.Context) error {
 	tokenResponse := response.TokenResponse{
 		AccessToken: newToken,
 		TokenType:   "Bearer",
-		ExpiresIn:   int(h.Config.Auth.TokenExpiry.Seconds()),
+		ExpiresIn:   int(h.config.Auth.TokenExpiry.Seconds()),
 	}
 
 	return c.JSON(http.StatusOK, response.NewSuccessResponse(tokenResponse))
@@ -156,11 +156,11 @@ func (h *AuthHandler) Logout(c echo.Context) error {
 	}
 
 	// Invalidate token
-	if err := h.AuthService.Logout(c.Request().Context(), token); err != nil {
+	if err := h.authService.Logout(c.Request().Context(), token); err != nil {
 		if appErr, ok := errors.IsAppError(err); ok {
 			return c.JSON(appErr.Status, response.NewErrorResponse(appErr.Message, appErr.Code))
 		}
-		h.Logger.Error("Logout failed", zap.Error(err))
+		h.logger.Error("Logout failed", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Logout failed", "INTERNAL"))
 	}
 
@@ -176,11 +176,11 @@ func (h *AuthHandler) LogoutAll(c echo.Context) error {
 	}
 
 	// Invalidate all tokens
-	if err := h.AuthService.LogoutAll(c.Request().Context(), userID); err != nil {
+	if err := h.authService.LogoutAll(c.Request().Context(), userID); err != nil {
 		if appErr, ok := errors.IsAppError(err); ok {
 			return c.JSON(appErr.Status, response.NewErrorResponse(appErr.Message, appErr.Code))
 		}
-		h.Logger.Error("Logout all failed", zap.Error(err))
+		h.logger.Error("Logout all failed", zap.Error(err))
 		return c.JSON(http.StatusInternalServerError, response.NewErrorResponse("Failed to logout from all devices", "INTERNAL"))
 	}
 
