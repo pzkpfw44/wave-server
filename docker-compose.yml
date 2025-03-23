@@ -12,9 +12,10 @@ services:
     command: bin/yugabyted start --daemon=false
     healthcheck:
       test: ["CMD", "bin/yugabyted", "status", "--json"]
-      interval: 5s
-      timeout: 10s
+      interval: 10s
+      timeout: 30s
       retries: 5
+      start_period: 30s
 
   # Go API service
   api:
@@ -39,8 +40,6 @@ services:
       yugabytedb:
         condition: service_healthy
     command: go run cmd/api/main.go
-    # For production build, use:
-    # command: ./wave-server
 
 volumes:
   yugabyte_data:
