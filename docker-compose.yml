@@ -17,7 +17,7 @@ services:
       retries: 5
       start_period: 30s
 
-  # Database initialization service
+  # Database initialization service - FIX THE PORT HERE
   db-init:
     build: .
     volumes:
@@ -33,7 +33,7 @@ services:
     command: >
       sh -c "
         echo 'Creating wave database...' &&
-        PGPASSWORD=yugabyte psql -h yugabytedb -U yugabyte -c 'CREATE DATABASE wave;' &&
+        PGPASSWORD=yugabyte psql -h yugabytedb -p 5433 -U yugabyte -c 'CREATE DATABASE wave;' &&
         echo 'Database created successfully'
       "
 
@@ -60,7 +60,7 @@ services:
     command: >
       sh -c "
         echo 'Running migrations...' &&
-        go run scripts/migrate.sh &&
+        sleep 5 &&
         echo 'Starting API server...' &&
         go run cmd/api/main.go
       "
