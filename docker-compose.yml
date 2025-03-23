@@ -11,11 +11,31 @@ services:
       - YB_MASTER_ARGS=--replication_factor=1
     command: bin/yugabyted start --daemon=false
     healthcheck:
-      test: ["CMD-SHELL", "bin/yugabyted status && echo 'YugabyteDB is healthy' || exit 1"]
+      test: ["CMD-SHELL", "bin/yugabyted status"]
       interval: 10s
       timeout: 10s
-      retries: 10
-      start_period: 40s
+      retries: 5
+      start_period: 30s
+
+  # Database initialization service
+  db-init:
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - DB_HOST=yugabytedb
+      - DB_PORT=5433
+      - DB_USER=yugabyte
+      - DB_PASSWORD=yugabyte
+    depends_on:
+      yugabytedb:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo 'Creating wave database...' &&
+        PGPASSWORD=yugabyte psql -h yugabytedb -U yugabyte -c 'CREATE DATABASE wave;' &&
+        echo 'Database created successfully'
+      "
 
   # Go API service
   api:
@@ -35,15 +55,14 @@ services:
       - ENVIRONMENT=development
       - LOG_LEVEL=debug
     depends_on:
-      yugabytedb:
-        condition: service_healthy
-    # Add a wait script to give YugabyteDB extra time
+      db-init:
+        condition: service_completed_successfully
     command: >
       sh -c "
-      echo 'Waiting for YugabyteDB to be ready...' &&
-      sleep 10 &&
-      echo 'Starting API server...' &&
-      go run cmd/api/main.go
+        echo 'Running migrations...' &&
+        go run scripts/migrate.sh &&
+        echo 'Starting API server...' &&
+        go run cmd/api/main.go
       "
 
 volumes:
