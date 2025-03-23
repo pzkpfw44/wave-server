@@ -92,13 +92,13 @@ func (s *MessagesScenario) Execute(ctx context.Context) (*ScenarioResult, error)
 	switch action {
 	case 0:
 		// Simulate sending a message
-		statusCode, err = s.sendMessage(ctx)
+		statusCode, err = s.sendMessage()
 	case 1:
 		// Simulate getting messages
-		statusCode, err = s.getMessages(ctx)
+		statusCode, err = s.getMessages()
 	case 2:
 		// Simulate getting a conversation
-		statusCode, err = s.getConversation(ctx)
+		statusCode, err = s.getConversation()
 	}
 
 	duration := time.Since(start)
@@ -112,21 +112,21 @@ func (s *MessagesScenario) Execute(ctx context.Context) (*ScenarioResult, error)
 }
 
 // sendMessage simulates sending a message
-func (s *MessagesScenario) sendMessage(ctx context.Context) (int, error) {
+func (s *MessagesScenario) sendMessage() (int, error) {
 	// In a real implementation, this would make an API request to send a message
 	time.Sleep(time.Duration(50+rand.Intn(100)) * time.Millisecond)
 	return 201, nil
 }
 
 // getMessages simulates getting messages
-func (s *MessagesScenario) getMessages(ctx context.Context) (int, error) {
+func (s *MessagesScenario) getMessages() (int, error) {
 	// In a real implementation, this would make an API request to get messages
 	time.Sleep(time.Duration(30+rand.Intn(70)) * time.Millisecond)
 	return 200, nil
 }
 
 // getConversation simulates getting a conversation
-func (s *MessagesScenario) getConversation(ctx context.Context) (int, error) {
+func (s *MessagesScenario) getConversation() (int, error) {
 	// In a real implementation, this would make an API request to get a conversation
 	time.Sleep(time.Duration(40+rand.Intn(80)) * time.Millisecond)
 	return 200, nil
@@ -184,16 +184,16 @@ func (s *ContactsScenario) Execute(ctx context.Context) (*ScenarioResult, error)
 	switch action {
 	case 0:
 		// Simulate adding a contact
-		statusCode, err = s.addContact(ctx)
+		statusCode, err = s.addContact()
 	case 1:
 		// Simulate getting contacts
-		statusCode, err = s.getContacts(ctx)
+		statusCode, err = s.getContacts()
 	case 2:
 		// Simulate updating a contact
-		statusCode, err = s.updateContact(ctx)
+		statusCode, err = s.updateContact()
 	case 3:
 		// Simulate deleting a contact
-		statusCode, err = s.deleteContact(ctx)
+		statusCode, err = s.deleteContact()
 	}
 
 	duration := time.Since(start)
@@ -207,28 +207,28 @@ func (s *ContactsScenario) Execute(ctx context.Context) (*ScenarioResult, error)
 }
 
 // addContact simulates adding a contact
-func (s *ContactsScenario) addContact(ctx context.Context) (int, error) {
+func (s *ContactsScenario) addContact() (int, error) {
 	// In a real implementation, this would make an API request to add a contact
 	time.Sleep(time.Duration(40+rand.Intn(60)) * time.Millisecond)
 	return 201, nil
 }
 
 // getContacts simulates getting contacts
-func (s *ContactsScenario) getContacts(ctx context.Context) (int, error) {
+func (s *ContactsScenario) getContacts() (int, error) {
 	// In a real implementation, this would make an API request to get contacts
 	time.Sleep(time.Duration(20+rand.Intn(40)) * time.Millisecond)
 	return 200, nil
 }
 
 // updateContact simulates updating a contact
-func (s *ContactsScenario) updateContact(ctx context.Context) (int, error) {
+func (s *ContactsScenario) updateContact() (int, error) {
 	// In a real implementation, this would make an API request to update a contact
 	time.Sleep(time.Duration(30+rand.Intn(50)) * time.Millisecond)
 	return 200, nil
 }
 
 // deleteContact simulates deleting a contact
-func (s *ContactsScenario) deleteContact(ctx context.Context) (int, error) {
+func (s *ContactsScenario) deleteContact() (int, error) {
 	// In a real implementation, this would make an API request to delete a contact
 	time.Sleep(time.Duration(30+rand.Intn(50)) * time.Millisecond)
 	return 200, nil

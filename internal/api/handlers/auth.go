@@ -45,7 +45,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	}
 
 	// Register user
-	user, err := h.userService.Register(
+	_, err := h.userService.Register(
 		c.Request().Context(),
 		req.Username,
 		req.PublicKey,

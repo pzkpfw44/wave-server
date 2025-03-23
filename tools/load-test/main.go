@@ -75,8 +75,8 @@ func main() {
 	fmt.Printf("Failed:            %d (%.2f%%)\n",
 		results.FailedRequests,
 		float64(results.FailedRequests)/float64(results.TotalRequests)*100)
-	fmt.Printf("Average Response:  %.2f ms\n", results.AverageResponseTime.Milliseconds())
-	fmt.Printf("95th Percentile:   %.2f ms\n", results.Percentile95.Milliseconds())
+	fmt.Printf("Average Response:  %.2f ms\n", float64(results.AverageResponseTime.Milliseconds()))
+	fmt.Printf("95th Percentile:   %.2f ms\n", float64(results.Percentile95.Milliseconds()))
 	fmt.Printf("Requests/sec:      %.2f\n", results.RequestsPerSecond)
 
 	// Save detailed results to file

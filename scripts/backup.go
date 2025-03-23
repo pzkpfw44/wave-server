@@ -1,43 +1,73 @@
-package scripts
+package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
+	"os"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 
+	"github.com/pzkpfw44/wave-server/internal/config"
+	"github.com/pzkpfw44/wave-server/pkg/logger"
 	"github.com/pzkpfw44/wave-server/pkg/yugabytedb"
 )
 
-// BackupDatabase performs a backup of the database
-func BackupDatabase(ctx context.Context, pool *pgxpool.Pool, backupPath string, logger *zap.Logger) error {
-	// Get cluster status to ensure we're backing up YugabyteDB
-	status, err := yugabytedb.GetClusterStatus(ctx, pool)
+var (
+	backupDir = flag.String("backup-dir", "./backups", "Directory to store backups")
+)
+
+func main() {
+	flag.Parse()
+
+	// Load .env file if it exists
+	_ = godotenv.Load()
+
+	// Load config
+	cfg, err := config.Load()
 	if err != nil {
-		return fmt.Errorf("failed to get cluster status: %w", err)
+		fmt.Printf("Failed to load configuration: %v\n", err)
+		os.Exit(1)
 	}
 
-	isYugabyte, ok := status["is_yugabyte"].(bool)
-	if !ok || !isYugabyte {
-		return fmt.Errorf("database is not YugabyteDB")
+	// Setup logger
+	log, err := logger.New(cfg.LogLevel, cfg.IsDevelopment())
+	if err != nil {
+		fmt.Printf("Failed to create logger: %v\n", err)
+		os.Exit(1)
+	}
+	defer logger.Sync(log)
+
+	// Create context
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+
+	// Connect to database
+	connString := cfg.GetDSN()
+	pool, err := pgxpool.New(ctx, connString)
+	if err != nil {
+		log.Fatal("Failed to connect to database", zap.Error(err))
+	}
+	defer pool.Close()
+
+	// Create backup directory if it doesn't exist
+	if _, err := os.Stat(*backupDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(*backupDir, 0755); err != nil {
+			log.Fatal("Failed to create backup directory", zap.Error(err))
+		}
 	}
 
-	// In a real implementation, this would use YugabyteDB's backup mechanism
-	// For now, we'll just log the backup attempt
-	logger.Info("Backing up database",
-		zap.String("backup_path", backupPath),
-		zap.Any("cluster_status", status))
+	// Create backup filename with timestamp
+	timestamp := time.Now().Format("20060102_150405")
+	backupFile := fmt.Sprintf("%s/wave_backup_%s.ybak", *backupDir, timestamp)
 
-	return nil
-}
+	// Perform backup
+	if err := yugabytedb.BackupDatabase(ctx, pool, backupFile, log); err != nil {
+		log.Fatal("Backup failed", zap.Error(err))
+	}
 
-// RestoreDatabase restores a database from backup
-func RestoreDatabase(ctx context.Context, pool *pgxpool.Pool, backupPath string, logger *zap.Logger) error {
-	// In a real implementation, this would use YugabyteDB's restore mechanism
-	// For now, we'll just log the restore attempt
-	logger.Info("Restoring database from backup",
-		zap.String("backup_path", backupPath))
-
-	return nil
+	log.Info("Backup completed successfully", zap.String("backup_file", backupFile))
 }
