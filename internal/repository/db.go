@@ -84,8 +84,8 @@ CREATE INDEX IF NOT EXISTS idx_users_last_active ON users(last_active);
 
 CREATE TABLE IF NOT EXISTS messages (
     message_id UUID PRIMARY KEY,
-    sender_pubkey VARCHAR(256) NOT NULL,
-    recipient_pubkey VARCHAR(256) NOT NULL,
+    sender_pubkey VARCHAR(1200) NOT NULL,
+    recipient_pubkey VARCHAR(1200) NOT NULL,
     ciphertext_kem BYTEA NOT NULL,
     ciphertext_msg BYTEA NOT NULL,
     nonce BYTEA NOT NULL,

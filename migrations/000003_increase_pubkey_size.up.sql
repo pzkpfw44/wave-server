@@ -1,0 +1,2 @@
+ALTER TABLE messages ALTER COLUMN sender_pubkey TYPE VARCHAR(1200);
+ALTER TABLE messages ALTER COLUMN recipient_pubkey TYPE VARCHAR(1200);
