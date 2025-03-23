@@ -122,6 +122,62 @@ func setupTestDatabase(t *testing.T) *repository.Database {
 	}
 }
 
+// MockRow implements pgx.Row for testing
+type MockRow struct{}
+
+// Scan implements the pgx.Row.Scan method
+func (m *MockRow) Scan(dest ...interface{}) error {
+	return pgx.ErrNoRows
+}
+
+// MockRows implements pgx.Rows for testing
+type MockRows struct {
+	closed bool
+}
+
+// Close implements the pgx.Rows.Close method
+func (m *MockRows) Close() {}
+
+// Err implements the pgx.Rows.Err method
+func (m *MockRows) Err() error {
+	return nil
+}
+
+// CommandTag implements the pgx.Rows.CommandTag method
+func (m *MockRows) CommandTag() pgconn.CommandTag {
+	return pgconn.CommandTag{}
+}
+
+// FieldDescriptions implements the pgx.Rows.FieldDescriptions method
+func (m *MockRows) FieldDescriptions() []pgconn.FieldDescription {
+	return nil
+}
+
+// Next implements the pgx.Rows.Next method
+func (m *MockRows) Next() bool {
+	return false
+}
+
+// Scan implements the pgx.Rows.Scan method
+func (m *MockRows) Scan(dest ...interface{}) error {
+	return nil
+}
+
+// Values implements the pgx.Rows.Values method
+func (m *MockRows) Values() ([]interface{}, error) {
+	return nil, nil
+}
+
+// RawValues implements the pgx.Rows.RawValues method
+func (m *MockRows) RawValues() [][]byte {
+	return nil
+}
+
+// Conn implements the pgx.Rows.Conn method
+func (m *MockRows) Conn() *pgx.Conn {
+	return nil
+}
+
 // mockDBPool is a simplified mock for pgxpool.Pool
 type mockDBPool struct {
 	t *testing.T
@@ -142,12 +198,12 @@ func (m *mockDBPool) Exec(ctx context.Context, sql string, arguments ...interfac
 
 // Query implements the Pool.Query method
 func (m *mockDBPool) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
-	return nil, nil
+	return &MockRows{}, nil
 }
 
 // QueryRow implements the Pool.QueryRow method
 func (m *mockDBPool) QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row {
-	return nil
+	return &MockRow{}
 }
 
 // Begin implements the Pool.Begin method

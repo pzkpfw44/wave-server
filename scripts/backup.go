@@ -1,2 +1,2 @@
-// This file has been removed and replaced with backup_tool.go
-// to avoid package conflicts and duplicate main functions
+// This file is intentionally left empty
+// The backup functionality is now in backup_tool.go

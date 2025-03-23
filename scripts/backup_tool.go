@@ -1,3 +1,4 @@
+// Package main provides the backup tool functionality
 package main
 
 import (
