@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # YugabyteDB for development
+  yugabytedb:
+    image: yugabytedb/yugabyte:latest
+    ports:
+      - "5433:5433"   # YSQL
+      - "7000:7000"   # Master UI
+    volumes:
+      - yugabyte_data:/home/yugabyte/yb_data
+    environment:
+      - YB_MASTER_ARGS=--replication_factor=1
+    command: bin/yugabyted start --daemon=false
+    healthcheck:
+      test: ["CMD", "bin/yugabyted", "status", "--json"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
+  # Go API service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+    environment:
+      - DB_HOST=yugabytedb
+      - DB_PORT=5433
+      - DB_USER=yugabyte
+      - DB_PASSWORD=yugabyte
+      - DB_NAME=wave
+      - JWT_SECRET=development_secret_key_replace_in_production
+      - PORT=8080
+      - ENVIRONMENT=development
+      - LOG_LEVEL=debug
+    depends_on:
+      yugabytedb:
+        condition: service_healthy
+    command: go run cmd/api/main.go
+    # For production build, use:
+    # command: ./wave-server
+
+volumes:
+  yugabyte_data:

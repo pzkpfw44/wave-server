@@ -1,0 +1,50 @@
+# Binaries
+/wave-server
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Environment variables
+.env
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+logs/
+
+# Backups
+backups/
+
+# Old data directories
+old_data/
+extension_wave_keys/
+extension_wave_messages/
+extension_wave_contacts/
+
+# Temporary files
+tmp/
+temp/
+
+# Generated files
+*.generated.go
