@@ -45,7 +45,7 @@ type TestEnv struct {
 
 var testEnv *TestEnv
 
-// Ensure mockDBPool implements pgxpool.Pool interface
+// This declaration verifies at compile time that mockDBPool implements pgxpool.Pool
 var _ pgxpool.Pool = (*mockDBPool)(nil)
 
 // setupTestServer sets up a test server and returns it along with a cleanup function

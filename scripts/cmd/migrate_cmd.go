@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	migration_tool "github.com/pzkpfw44/wave-server/scripts"
+	"github.com/pzkpfw44/wave-server/scripts/migration_tool"
 )
 
 func main() {
