@@ -108,7 +108,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages((
 
 CREATE TABLE IF NOT EXISTS contacts (
     user_id VARCHAR(64) NOT NULL,
-    contact_pubkey VARCHAR(256) NOT NULL,
+    contact_pubkey VARCHAR(1200) NOT NULL,
     nickname VARCHAR(64) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, contact_pubkey)

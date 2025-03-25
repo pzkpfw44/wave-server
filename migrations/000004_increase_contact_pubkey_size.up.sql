@@ -1,0 +1,1 @@
+ALTER TABLE contacts ALTER COLUMN contact_pubkey TYPE VARCHAR(1200);
