@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
@@ -40,8 +42,12 @@ func (m *AuthMiddleware) Authenticate() echo.MiddlewareFunc {
 				token = authHeader[7:] // Remove "Bearer " prefix
 			}
 
+			// Create a request-specific context with a longer timeout
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
 			// Validate token
-			userID, err := m.authService.ValidateToken(c.Request().Context(), token)
+			userID, err := m.authService.ValidateToken(ctx, token)
 			if err != nil {
 				m.logger.Debug("Authentication failed", zap.Error(err))
 				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid or expired token")
@@ -50,11 +56,12 @@ func (m *AuthMiddleware) Authenticate() echo.MiddlewareFunc {
 			// Set user ID in context
 			c.Set("user_id", userID)
 
-			// Update activity timestamp
-			// This is not critical, so we don't handle errors or wait for it
+			// Update activity in a separate goroutine with its own context
 			go func() {
-				ctx := c.Request().Context()
-				if err := m.authService.UpdateUserActivity(ctx, userID); err != nil {
+				bgCtx, bgCancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer bgCancel()
+
+				if err := m.authService.UpdateUserActivity(bgCtx, userID); err != nil {
 					m.logger.Warn("Failed to update user activity", zap.Error(err), zap.String("user_id", userID))
 				}
 			}()
