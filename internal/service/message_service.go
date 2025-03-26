@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/base64"
+	"sort"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -119,7 +120,7 @@ func (s *MessageService) GetMessageByID(ctx context.Context, messageID uuid.UUID
 	return s.messageRepo.GetByID(ctx, messageID)
 }
 
-// GetMessagesForUser gets all messages for a user (as recipient) with pagination
+// GetMessagesForUser gets all messages for a user (both sent and received) with pagination
 func (s *MessageService) GetMessagesForUser(ctx context.Context, userPubKey string, limit, offset int) ([]*domain.Message, error) {
 	if limit <= 0 {
 		limit = 100 // Default limit
@@ -128,7 +129,34 @@ func (s *MessageService) GetMessagesForUser(ctx context.Context, userPubKey stri
 		limit = 1000 // Max limit
 	}
 
-	return s.messageRepo.GetByRecipient(ctx, userPubKey, limit, offset)
+	// Get messages where user is recipient
+	receivedMessages, err := s.messageRepo.GetByRecipient(ctx, userPubKey, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get messages where user is sender
+	sentMessages, err := s.messageRepo.GetBySender(ctx, userPubKey, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	// Combine messages and sort by timestamp (newest first)
+	allMessages := append(receivedMessages, sentMessages...)
+	sort.Slice(allMessages, func(i, j int) bool {
+		return allMessages[i].Timestamp.After(allMessages[j].Timestamp)
+	})
+
+	// Apply pagination to combined results
+	end := offset + limit
+	if end > len(allMessages) {
+		end = len(allMessages)
+	}
+	if offset >= len(allMessages) {
+		return []*domain.Message{}, nil
+	}
+
+	return allMessages[offset:end], nil
 }
 
 // GetMessagesSentByUser gets all messages sent by a user with pagination

@@ -59,7 +59,10 @@ func (m *Message) ToResponse(includeAllFields bool) MessageResponse {
 		Status:          m.Status,
 	}
 
-	// Only include sender fields if specified (typically only for the sender)
+	// Include sender fields for the sender or for both if debugging
+	// Set to true for debugging to always include sender fields
+	includeAllFields = true // DEBUG: Always include sender fields
+
 	if includeAllFields {
 		response.SenderCiphertextKEM = base64.URLEncoding.EncodeToString(m.SenderCiphertextKEM)
 		response.SenderCiphertextMsg = base64.URLEncoding.EncodeToString(m.SenderCiphertextMsg)
