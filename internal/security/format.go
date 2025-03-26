@@ -6,11 +6,11 @@ import (
 )
 
 const (
-	// Kyber512 constants
+	// Kyber512 constants - adjusted to be more flexible with encrypted sizes
 	Kyber512PublicKeyMinSize  = 800  // Approximate minimum size in bytes
 	Kyber512PublicKeyMaxSize  = 1000 // Approximate maximum size in bytes
 	Kyber512PrivateKeyMinSize = 1200 // Approximate minimum size in bytes
-	Kyber512PrivateKeyMaxSize = 1600 // Approximate maximum size in bytes
+	Kyber512PrivateKeyMaxSize = 2000 // Increased maximum size to account for encryption overhead
 )
 
 var (
@@ -20,7 +20,6 @@ var (
 )
 
 // ValidatePublicKeyFormat validates that a public key has the expected format
-// Note: This doesn't validate the cryptographic properties, only the format
 func ValidatePublicKeyFormat(publicKey []byte) error {
 	if err := ValidateBytes(publicKey, Kyber512PublicKeyMinSize, Kyber512PublicKeyMaxSize); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidPublicKeyFormat, err)
@@ -29,7 +28,6 @@ func ValidatePublicKeyFormat(publicKey []byte) error {
 }
 
 // ValidateEncryptedPrivateKeyFormat validates that an encrypted private key has the expected format
-// Note: This doesn't decrypt or validate the key itself, only checks its format
 func ValidateEncryptedPrivateKeyFormat(encryptedPrivateKey []byte) error {
 	if err := ValidateBytes(encryptedPrivateKey, Kyber512PrivateKeyMinSize, Kyber512PrivateKeyMaxSize); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidPrivateKeyFormat, err)
